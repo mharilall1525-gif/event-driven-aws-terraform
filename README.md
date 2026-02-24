@@ -2,58 +2,57 @@
 
 ## Overview
 
-This project provisions a production-style event-driven serverless architecture on AWS using Terraform.
+This project provisions a production-style, event-driven serverless architecture on AWS using Terraform (Infrastructure as Code).
 
-The system demonstrates Infrastructure as Code (IaC), scalable event processing, and secure resource provisioning using AWS managed services.
+It demonstrates scalable backend design, secure IAM configuration, API integration, and persistent data storage using managed AWS services.
+
+The system allows clients to send messages via an API endpoint, which are processed by AWS Lambda and stored in DynamoDB.
 
 ---
 
 ## Architecture
 
-The architecture includes:
+**Services Used:**
 
-- **AWS Lambda (Python 3.9)** – Serverless compute for request processing  
-- **API Gateway (HTTP API)** – Public HTTP endpoint  
-- **Amazon DynamoDB** – NoSQL database for message storage  
-- **IAM Roles & Policies** – Secure permission management  
-- **Terraform** – Infrastructure as Code provisioning  
+- AWS Lambda (2 functions)
+- Amazon API Gateway (HTTP API)
+- Amazon DynamoDB
+- IAM Roles & Policies
+- Terraform (Infrastructure as Code)
 
----
+### Flow
 
-## How It Works
-
-1. API Gateway receives an HTTP request.
-2. The request triggers a Lambda function.
-3. Lambda processes the payload.
-4. The message is stored in DynamoDB.
-5. A success response is returned to the client.
-
-This design demonstrates:
-
-- Stateless serverless execution  
-- Managed database storage  
-- Infrastructure automation  
-- Cloud-native architecture principles  
+1. Client sends a POST request to API Gateway.
+2. API Gateway triggers a Lambda function.
+3. Lambda processes the request.
+4. Data is stored in DynamoDB.
+5. API responds with confirmation.
 
 ---
 
-## Infrastructure as Code
+## Tech Stack
 
-All resources are defined using Terraform.
+- Terraform (HCL)
+- Python (Lambda runtime)
+- AWS (us-east-2 region)
+- Git & GitHub
 
-### Key Terraform Components
+---
 
-- `main.tf` – Core AWS resources  
-- `provider.tf` – AWS provider configuration  
-- `variables.tf` – Parameterized inputs  
-- `outputs.tf` – Deployment outputs  
-- `.gitignore` – Excludes Terraform state and artifacts  
+## Infrastructure Components
+
+- `main.tf` – Core infrastructure resources
+- `provider.tf` – AWS provider configuration
+- `variables.tf` – Input variables
+- `outputs.tf` – Output values (API endpoint)
+- `/lambda` – Primary Lambda function
+- `/lambda_ingestion` – Ingestion Lambda function
 
 ---
 
 ## Deployment
 
+### 1. Initialize Terraform
+
 ```bash
 terraform init
-terraform plan
-terraform apply
