@@ -1,4 +1,13 @@
+# Terraform
 .terraform/
 terraform.tfstate
 terraform.tfstate.backup
-function.zip
+*.tfstate
+*.tfstate.*
+
+# Lambda build artifacts
+*.zip
+
+# OS files
+.DS_Store
+Thumbs.db

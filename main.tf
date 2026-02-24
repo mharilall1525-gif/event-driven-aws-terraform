@@ -60,6 +60,28 @@ resource "aws_iam_role_policy" "lambda_dynamodb_policy" {
 }
 
 ##################################
+# SQS Permissions for Lambda
+##################################
+
+resource "aws_iam_role_policy" "lambda_sqs_policy" {
+  name = "lambda-sqs-policy"
+  role = aws_iam_role.lambda_exec_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = [
+        "sqs:ReceiveMessage",
+        "sqs:DeleteMessage",
+        "sqs:GetQueueAttributes"
+      ]
+      Resource = aws_sqs_queue.event_queue.arn
+    }]
+  })
+}
+
+##################################
 # Lambda Function
 ##################################
 
@@ -77,4 +99,107 @@ resource "aws_lambda_function" "app_lambda" {
       TABLE_NAME = aws_dynamodb_table.messages.name
     }
   }
+}
+
+##################################
+# Dead Letter Queue
+##################################
+
+resource "aws_sqs_queue" "dlq" {
+  name = "event-dlq"
+}
+
+##################################
+# Main Queue
+##################################
+
+resource "aws_sqs_queue" "event_queue" {
+  name = "event-queue"
+
+  redrive_policy = jsonencode({
+    deadLetterTargetArn = aws_sqs_queue.dlq.arn
+    maxReceiveCount     = 5
+  })
+}
+
+##################################
+# SQS Event Source Mapping
+##################################
+
+resource "aws_lambda_event_source_mapping" "sqs_trigger" {
+  event_source_arn = aws_sqs_queue.event_queue.arn
+  function_name = aws_lambda_function.app_lambda.arn
+  batch_size       = 1
+}
+
+##################################
+# Allow Lambda to Send to SQS
+##################################
+
+resource "aws_iam_role_policy" "lambda_sqs_send_policy" {
+  name = "lambda-sqs-send-policy"
+  role = aws_iam_role.lambda_exec_role.id
+
+  policy = jsonencode({
+    Version = "2012-10-17"
+    Statement = [{
+      Effect = "Allow"
+      Action = ["sqs:SendMessage"]
+      Resource = aws_sqs_queue.event_queue.arn
+    }]
+  })
+}
+
+##################################
+# Ingest Lambda
+##################################
+
+resource "aws_lambda_function" "ingest_lambda" {
+  function_name = "ingest-lambda"
+  role          = aws_iam_role.lambda_exec_role.arn
+  handler       = "index.lambda_handler"
+  runtime       = "python3.9"
+
+  filename         = "lambda_ingestion/function.zip"
+  source_code_hash = filebase64sha256("lambda_ingestion/function.zip")
+
+  environment {
+    variables = {
+      QUEUE_URL = aws_sqs_queue.event_queue.id
+    }
+  }
+}
+
+##################################
+# HTTP API Gateway
+##################################
+
+resource "aws_apigatewayv2_api" "http_api" {
+  name          = "event-api"
+  protocol_type = "HTTP"
+}
+
+resource "aws_apigatewayv2_integration" "lambda_integration" {
+  api_id           = aws_apigatewayv2_api.http_api.id
+  integration_type = "AWS_PROXY"
+  integration_uri  = aws_lambda_function.ingest_lambda.invoke_arn
+}
+
+resource "aws_apigatewayv2_route" "post_route" {
+  api_id    = aws_apigatewayv2_api.http_api.id
+  route_key = "POST /message"
+  target    = "integrations/${aws_apigatewayv2_integration.lambda_integration.id}"
+}
+
+resource "aws_apigatewayv2_stage" "dev" {
+  api_id      = aws_apigatewayv2_api.http_api.id
+  name        = "$default"
+  auto_deploy = true
+}
+
+resource "aws_lambda_permission" "api_permission" {
+  statement_id  = "AllowAPIGatewayInvoke"
+  action        = "lambda:InvokeFunction"
+  function_name = aws_lambda_function.ingest_lambda.function_name
+  principal     = "apigateway.amazonaws.com"
 }
