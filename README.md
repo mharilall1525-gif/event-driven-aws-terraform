@@ -4,7 +4,7 @@
 
 This project provisions a production-style event-driven serverless backend on AWS using Terraform (Infrastructure as Code).
 
-The goal was to build a realistic cloud architecture where services are decoupled, scalable, and resilient — not just deploy a single Lambda function.
+The goal was to build a realistic cloud architecture where services are decoupled, scalable, and resilient, not just deploy a single Lambda function.
 
 Clients send messages to an API endpoint, and the system processes them asynchronously before storing them in a database.
 
