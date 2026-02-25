@@ -52,7 +52,7 @@ Clients send messages to an API endpoint, and the system processes them asynchro
 ### Architecture Diagram
 
 <p align="center">
-  <img src="./my_diagram.png" width="900">
+  <img src="./architecture_diagram.png" width="900">
 </p>
 
 
